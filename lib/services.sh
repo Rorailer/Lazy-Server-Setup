@@ -46,11 +46,19 @@ _render_and_up(){
     local template="$2"
     local target_dir="${DATA_DIR}/${service_name}"
 
+    if ! command -v docker &>/dev/null; then
+        err "Docker is not installed. Cannot bring up ${service_name}."
+        exit 1
+    fi
+
     mkdir -p "${target_dir}"
     envsubst < "${SCRIPT_DIR}/templates/${template}" \
         > "${target_dir}/docker-compose.yaml"
 
-    ( cd "${target_dir}" && docker compose up -d )
+    if ! ( cd "${target_dir}" && docker compose up -d ); then
+        err "Failed to start ${service_name}. Check docker logs for details."
+        exit 1
+    fi
 }
 
 

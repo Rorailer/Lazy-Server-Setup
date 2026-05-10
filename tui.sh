@@ -784,20 +784,31 @@ run_hardening(){
 run_docker_install(){
     _picked "Docker" || return
     [[ ${#SELECTED_CONTAINERS[@]} -eq 0 ]] && return
-    docker_exist
     install_selected_services
 }
 
 run_cloudflared_only(){
-    # cloudflared was selected but Docker wasn't — still need docker
+    # cloudflared was selected but Docker wasn't — still need to launch its container
     _picked "Cloudflared" || return
     [[ -z "${CLOUDFLARED_TOKEN:-}" ]] && return
 
     # if Docker is also picked, install_selected_services already handled cloudflared
     _picked "Docker" && return
 
-    docker_exist
     install_cloudflared
+}
+
+# called during the SELECTION phase, before any output redirection. ensures
+# Docker is installed up front so the install phase can run quietly.
+ensure_docker_if_needed(){
+    local need_docker=0
+    if _picked "Docker" && [[ ${#SELECTED_CONTAINERS[@]} -gt 0 ]]; then
+        need_docker=1
+    fi
+    if _picked "Cloudflared" && [[ -n "${CLOUDFLARED_TOKEN:-}" ]]; then
+        need_docker=1
+    fi
+    [[ $need_docker -eq 1 ]] && docker_exist
 }
 
 
@@ -921,6 +932,10 @@ main(){
     # ---- review + go ----
     step_counter "Review" 5 5
     step_review
+
+    # ensure docker is installed *before* the tee redirection.
+    # this way the "Install Docker now?" prompt is visible to the user.
+    ensure_docker_if_needed
 
     # ---- install phase ----
     spacer
