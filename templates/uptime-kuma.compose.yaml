@@ -1,0 +1,15 @@
+networks:
+  ${DOCKER_NETWORK_NAME}:
+    external: true
+
+services:
+  uptime-kuma:
+    image: louislam/uptime-kuma:${UPTIME_KUMA_VERSION}
+    container_name: uptime-kuma
+    restart: always
+    networks:
+      - ${DOCKER_NETWORK_NAME}
+    ports:
+      - "${UPTIME_KUMA_PORT}:3001"
+    volumes:
+      - ./data:/app/data

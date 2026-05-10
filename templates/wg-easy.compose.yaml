@@ -1,0 +1,26 @@
+networks:
+  ${DOCKER_NETWORK_NAME}:
+    external: true
+
+services:
+  wg-easy:
+    image: ghcr.io/wg-easy/wg-easy:${WG_EASY_VERSION}
+    container_name: wg-easy
+    restart: always
+    networks:
+      - ${DOCKER_NETWORK_NAME}
+    ports:
+      - "${WG_EASY_VPN_PORT}:51820/udp"
+      - "${WG_EASY_WEB_PORT}:51821/tcp"
+    environment:
+      - WG_HOST=${WG_EASY_HOST}
+      - PASSWORD_HASH=${WG_EASY_PASSWORD_HASH}
+      - WG_PORT=${WG_EASY_VPN_PORT}
+    volumes:
+      - ./data:/etc/wireguard
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    sysctls:
+      - net.ipv4.ip_forward=1
+      - net.ipv4.conf.all.src_valid_mark=1

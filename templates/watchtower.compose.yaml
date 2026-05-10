@@ -1,0 +1,17 @@
+networks:
+  ${DOCKER_NETWORK_NAME}:
+    external: true
+
+services:
+  watchtower:
+    image: containrrr/watchtower:${WATCHTOWER_VERSION}
+    container_name: watchtower
+    restart: always
+    networks:
+      - ${DOCKER_NETWORK_NAME}
+    environment:
+      - WATCHTOWER_CLEANUP=${WATCHTOWER_CLEANUP}
+      - WATCHTOWER_POLL_INTERVAL=${WATCHTOWER_POLL_INTERVAL}
+      - WATCHTOWER_INCLUDE_RESTARTING=true
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock

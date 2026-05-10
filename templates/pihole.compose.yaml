@@ -1,0 +1,24 @@
+networks:
+  ${DOCKER_NETWORK_NAME}:
+    external: true
+
+services:
+  pihole:
+    image: pihole/pihole:${PIHOLE_VERSION}
+    container_name: pihole
+    restart: always
+    networks:
+      - ${DOCKER_NETWORK_NAME}
+    ports:
+      - "53:53/tcp"
+      - "53:53/udp"
+      - "${PIHOLE_WEB_PORT}:80/tcp"
+    environment:
+      - TZ=${PIHOLE_TIMEZONE}
+      - FTLCONF_webserver_api_password=${PIHOLE_PASSWORD}
+      - FTLCONF_dns_listeningMode=all
+    volumes:
+      - ./etc-pihole:/etc/pihole
+      - ./etc-dnsmasq:/etc/dnsmasq.d
+    cap_add:
+      - NET_ADMIN

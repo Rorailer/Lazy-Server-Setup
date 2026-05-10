@@ -1,0 +1,15 @@
+networks:
+  ${DOCKER_NETWORK_NAME}:
+    external: true
+
+services:
+  memos:
+    image: neosmemo/memos:${MEMOS_VERSION}
+    container_name: memos
+    restart: always
+    networks:
+      - ${DOCKER_NETWORK_NAME}
+    ports:
+      - "${MEMOS_PORT}:5230"
+    volumes:
+      - ./data:/var/opt/memos

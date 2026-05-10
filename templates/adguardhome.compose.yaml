@@ -1,0 +1,19 @@
+networks:
+  ${DOCKER_NETWORK_NAME}:
+    external: true
+
+services:
+  adguardhome:
+    image: adguard/adguardhome:${ADGUARD_VERSION}
+    container_name: adguardhome
+    restart: always
+    networks:
+      - ${DOCKER_NETWORK_NAME}
+    ports:
+      - "53:53/tcp"
+      - "53:53/udp"
+      - "${ADGUARD_SETUP_PORT}:3000/tcp"
+      - "${ADGUARD_WEB_PORT}:80/tcp"
+    volumes:
+      - ./work:/opt/adguardhome/work
+      - ./conf:/opt/adguardhome/conf
