@@ -53,10 +53,14 @@ trap 'revert_sudoers' EXIT SIGHUP SIGINT SIGTERM
 
 # ---- transcript log ----
 # everything gets tee'd to /tmp/setup-result.log so the user can grep credentials
-# or replay the install later. mentioned in the final summary.
-mkdir -p "$(dirname "$SETUP_LOG")"
-: > "$SETUP_LOG"
-chmod 600 "$SETUP_LOG"
+# or replay the install later. defensive: if we can't write the default (e.g.
+# leftover from a previous run with different ownership) we fall back to an
+# auto-generated path under /tmp.
+mkdir -p "$(dirname "$SETUP_LOG")" 2>/dev/null || true
+if ! ( : > "$SETUP_LOG" ) 2>/dev/null; then
+    SETUP_LOG="$(mktemp -t setup-result.XXXXXX.log)"
+fi
+chmod 600 "$SETUP_LOG" 2>/dev/null || true
 
 
 # ──────────────────────────────────────────────────────────────────────────────
