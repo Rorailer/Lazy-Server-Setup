@@ -17,8 +17,15 @@ ok()   { echo -e "${GREEN}[  OK]${NC}  $*"; }
 warn() { echo -e "${YELLOW}[WARN]${NC}  $*"; }
 err()  { echo -e "${RED}[FAIL]${NC}  $*"; }
 
+# pick up the same .env used by setup.sh so paths/names match
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [[ -f "${SCRIPT_DIR}/.env" ]]; then
+    # shellcheck source=.env
+    source "${SCRIPT_DIR}/.env"
+fi
+
 DATA_DIR="${DATA_DIR:-/opt/server-data}"
-DOCKER_NETWORK="${DOCKER_NETWORK:-proxy}"
+DOCKER_NETWORK="${DOCKER_NETWORK_NAME:-${DOCKER_NETWORK:-proxyNetwork}}"
 
 if [[ $EUID -ne 0 ]]; then
     err "This script must be run as root (use sudo)"
@@ -39,8 +46,8 @@ read -rp "$(echo -e "${RED}[?]${NC} Are you sure you want to proceed? [y/N]: ")"
 
 # Stop and remove containers
 log "Stopping and removing containers..."
-docker stop cloudflared nginx-proxy-manager portainer 2>/dev/null || true
-docker rm cloudflared nginx-proxy-manager portainer 2>/dev/null || true
+docker stop cloudflared npm portainer 2>/dev/null || true
+docker rm cloudflared npm portainer 2>/dev/null || true
 
 # Remove NPM compose stack
 if [[ -f "${DATA_DIR}/nginx-proxy-manager/docker-compose.yml" ]]; then

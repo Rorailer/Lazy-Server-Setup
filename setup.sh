@@ -14,7 +14,8 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ENV_FILE="${SCRIPT_DIR}/.env"
 
-if [[ -f "$ENV_FILE"]]; then
+if [[ -f "$ENV_FILE" ]]; then
+    # shellcheck source=.env
     source "$ENV_FILE"
 fi
 
@@ -25,8 +26,9 @@ NPM_HTTPS_PORT="${NPM_HTTPS_PORT:-443}"
 NPM_ADMIN_PORT="${NPM_ADMIN_PORT:-81}"
 PORTAINER_PORT="${PORTAINER_PORT:-9000}"
 CLOUDFLARED_TOKEN="${CLOUDFLARED_TOKEN:-}"
-DOCKER_NETWORK_NAME="${DOCKER_NETWORK_NAME:-proxyNetwork}"
-DATA_DIR="${DATA_DIR:-/opt/DATA}"
+# .env.example uses DOCKER_NETWORK; accept both names
+DOCKER_NETWORK_NAME="${DOCKER_NETWORK_NAME:-${DOCKER_NETWORK:-proxyNetwork}}"
+DATA_DIR="${DATA_DIR:-/opt/server-data}"
 
 
 # ---- COLORS ----
@@ -71,18 +73,19 @@ spacer(){
 }
 
 
-check_sudo(){
+check_root(){
     if [[ $EUID -ne 0 ]]; then
         err "Run this script with sudo.";
         exit 1;
     fi
 }
 
-approve(){
+confirm(){
     local msg="$1"
+    local choice
     read -rp "$(echo -e "${YELLOW}[??]${NC} $msg [y/N]: ")" choice
-    [[ "$choice" == "y" || "$choice" == "Y"]] && return 0 || return 1 ]]
-    }
+    [[ "$choice" == "y" || "$choice" == "Y" ]]
+}
 
 
 
@@ -123,9 +126,11 @@ install_docker(){
     fi
 
     if command -v docker &> /dev/null; then
-        warn "Docker is already installed. Skipping this step"
-        if ! confirm "Reinstall Docker? (Prolly no need (do this if don't have docker compose)) (y/N)";then
-            ok "skipping"
+        warn "Docker is already installed: $(docker --version)"
+        if ! confirm "Reinstall Docker? (only needed if 'docker compose' is missing)"; then
+            ok "Keeping existing Docker install."
+            # still make sure the shared network exists for the services below
+            docker network create "${DOCKER_NETWORK_NAME}" 2>/dev/null || true
             return
         fi
     fi
@@ -155,7 +160,7 @@ install_docker(){
     systemctl start docker
 
     #docker network setup
-    docker network create ${DOCKER_NETWORK_NAME} 2>/dev/null || true
+    docker network create "${DOCKER_NETWORK_NAME}" 2>/dev/null || true
 
     ok "Docker Installed: $(docker --version)"
     ok "Docker Compose Installed: $(docker compose version)"
@@ -182,10 +187,10 @@ setup_portainer(){
     docker run -d \
         --name=portainer \
         --restart=always \
-        -p ${PORTAINER_PORT}:9000 \
+        -p "${PORTAINER_PORT}:9000" \
         -v /var/run/docker.sock:/var/run/docker.sock \
         -v "${portainer_dir}/data:/data" \
-        --network ${DOCKER_NETWORK_NAME} \
+        --network "${DOCKER_NETWORK_NAME}" \
         portainer/portainer-ce:latest
     
     ok "Portainer setup at http://localhost:${PORTAINER_PORT} or http://<server-ip>:${PORTAINER_PORT}"
@@ -249,10 +254,10 @@ setup_cloudflared(){
         echo "  the Cloudflare Zero Trust dashboard:"
         echo "    https://one.dash.cloudflare.com → Networks → Tunnels → Create"
         echo ""
-        read -rp "$(echo -e "${YELLOW}[?]${NC} Enter your Cloudflare Tunnel token (or press Enter to skip): ")" CLOUDFLARED_TOKEN
+        read -rp "$(echo -e "${YELLOW}[?]${NC} Enter your Cloudflare Tunnel token (or press Enter to skip): ")" CLOUDFLARED_TOKEN || true
 
         if [[ -z "$CLOUDFLARED_TOKEN" ]]; then
-            warn "Skipping CLoudflared setup."
+            warn "Skipping Cloudflared setup."
             return
         fi
 
@@ -275,23 +280,17 @@ setup_cloudflared(){
 
 # UFW SETUP
 
-confire_firewall(){
+configure_firewall(){
     spacer
     log "Setting up UFW"
     spacer
-
-
-    ufw --force reset
-    ufw default deny incoming
-    ufw default allow outgoing
-
 
     # Ask for SSH port
     echo ""
     echo -e "  ${BOLD}What SSH port is your server using?${NC}"
     echo -e "  ${YELLOW}Press Enter if you don't know (default: 22)${NC}"
     echo ""
-    read -rp "$(echo -e "${CYAN}[?]${NC} SSH port [22]: ")" SSH_PORT
+    read -rp "$(echo -e "${CYAN}[?]${NC} SSH port [22]: ")" SSH_PORT || true
     SSH_PORT="${SSH_PORT:-22}"
 
 
@@ -337,7 +336,7 @@ print_summary() {
     echo -e "${NC}"
     echo -e "${GREEN}${BOLD}Services Running:${NC}"
     echo ""
-    echo -e "  ${BOLD}Portainer${NC}          https://${server_ip}:${PORTAINER_PORT}"
+    echo -e "  ${BOLD}Portainer${NC}          http://${server_ip}:${PORTAINER_PORT}"
     echo -e "  ${BOLD}NPM Admin${NC}          http://${server_ip}:${NPM_ADMIN_PORT}"
     echo -e "                     Login: admin@example.com / changeme"
     echo -e "  ${BOLD}HTTP${NC}               http://${server_ip}:${NPM_HTTP_PORT}"
