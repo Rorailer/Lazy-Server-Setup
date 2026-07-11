@@ -51,6 +51,12 @@ _render_and_up(){
         exit 1
     fi
 
+    if ! command -v envsubst &>/dev/null; then
+        log "Installing gettext-base (provides envsubst)..."
+        apt-get install -y gettext-base >/dev/null 2>&1 \
+            || { apt-get update -qq >/dev/null 2>&1; apt-get install -y gettext-base >/dev/null 2>&1; }
+    fi
+
     mkdir -p "${target_dir}"
     envsubst < "${SCRIPT_DIR}/templates/${template}" \
         > "${target_dir}/docker-compose.yaml"

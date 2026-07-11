@@ -236,7 +236,7 @@ step_hardening_picks(){
 }
 
 step_hardening_user(){
-    [[ "${HARDENING[create_user]:-}" == "1" ]] || return
+    [[ "${HARDENING[create_user]:-}" == "1" ]] || return 0
 
     redraw_state
     HARDEN_USERNAME=$(gum input --header "Sudo user name" --placeholder "myuser")
@@ -249,7 +249,7 @@ step_hardening_user(){
 }
 
 step_hardening_ssh_key(){
-    [[ "${HARDENING[ssh_key]:-}" == "1" ]] || return
+    [[ "${HARDENING[ssh_key]:-}" == "1" ]] || return 0
 
     redraw_state
     HARDEN_SSH_KEY=$(gum input --header "Paste your SSH public key" --width 100 \
@@ -262,7 +262,7 @@ step_hardening_ssh_key(){
 }
 
 step_hardening_swap(){
-    [[ "${HARDENING[create_swap]:-}" == "1" ]] || return
+    [[ "${HARDENING[create_swap]:-}" == "1" ]] || return 0
 
     redraw_state
     local default_size
@@ -273,7 +273,7 @@ step_hardening_swap(){
 }
 
 step_hardening_timezone(){
-    [[ "${HARDENING[set_timezone]:-}" == "1" ]] || return
+    [[ "${HARDENING[set_timezone]:-}" == "1" ]] || return 0
 
     redraw_state
     HARDEN_TIMEZONE=$(gum input --header "Timezone" \
@@ -283,7 +283,7 @@ step_hardening_timezone(){
 
 # fail2ban tuning. all fields have sensible defaults — press enter to accept.
 step_hardening_fail2ban(){
-    [[ "${HARDENING[setup_fail2ban]:-}" == "1" ]] || return
+    [[ "${HARDENING[setup_fail2ban]:-}" == "1" ]] || return 0
 
     redraw_state
 
@@ -323,7 +323,7 @@ step_hardening_fail2ban(){
 
 # ---- Docker container sub-flow ----
 step_pick_containers(){
-    _picked "Docker" || return
+    _picked "Docker" || return 0
 
     redraw_state
     local picks
@@ -467,7 +467,7 @@ step_configure_container(){
 
 # ---- Cloudflared sub-flow ----
 step_cloudflared(){
-    _picked "Cloudflared" || return
+    _picked "Cloudflared" || return 0
 
     redraw_state
     CLOUDFLARED_TOKEN=$(gum input \
@@ -483,7 +483,7 @@ step_cloudflared(){
 # Pre-check only the recommended ones; everything else is shown but unchecked
 # so the user can opt in (e.g. if they're not using NPM as a reverse proxy).
 step_ufw_ports(){
-    [[ "${HARDENING[setup_ufw]:-}" == "1" ]] || return
+    [[ "${HARDENING[setup_ufw]:-}" == "1" ]] || return 0
 
     redraw_state
 
@@ -718,7 +718,7 @@ step_review(){
 # ──────────────────────────────────────────────────────────────────────────────
 
 run_hardening(){
-    _picked "Server Hardening" || return
+    _picked "Server Hardening" || return 0
 
     if [[ "${HARDENING[create_user]:-}" == "1" ]]; then
         if [[ "$HARDEN_USER_MODE" == "new" ]]; then
@@ -782,14 +782,14 @@ run_hardening(){
 }
 
 run_docker_install(){
-    _picked "Docker" || return
+    _picked "Docker" || return 0
     [[ ${#SELECTED_CONTAINERS[@]} -eq 0 ]] && return
     install_selected_services
 }
 
 run_cloudflared_only(){
     # cloudflared was selected but Docker wasn't — still need to launch its container
-    _picked "Cloudflared" || return
+    _picked "Cloudflared" || return 0
     [[ -z "${CLOUDFLARED_TOKEN:-}" ]] && return
 
     # if Docker is also picked, install_selected_services already handled cloudflared
@@ -808,7 +808,9 @@ ensure_docker_if_needed(){
     if _picked "Cloudflared" && [[ -n "${CLOUDFLARED_TOKEN:-}" ]]; then
         need_docker=1
     fi
-    [[ $need_docker -eq 1 ]] && docker_exist
+    if [[ $need_docker -eq 1 ]]; then
+        docker_exist
+    fi
 }
 
 

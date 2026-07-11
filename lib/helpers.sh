@@ -167,7 +167,12 @@ docker_exist(){
     fi
 
     warn "Docker is not installed."
-    if ! approve "Install Docker now? (uses the official get.docker.com one-liner)"; then
+    if command -v gum &> /dev/null; then
+        if ! gum confirm "Install Docker now? (uses the official get.docker.com script)"; then
+            err "Docker is required to run the selected services. Aborting."
+            exit 1
+        fi
+    elif ! approve "Install Docker now? (uses the official get.docker.com one-liner)" "Y"; then
         err "Docker is required to run the selected services. Aborting."
         exit 1
     fi
