@@ -28,7 +28,7 @@ In order, when you run `sudo ./tui.sh`:
 ## Quick start
 
 ```bash
-git clone https://github.com/Rorailer/Server-Setup-TUI.git
+git clone https://github.com/Rorailer/Lazy-Server-Setup.git
 cd Server-Setup-TUI
 chmod +x tui.sh
 sudo ./tui.sh
